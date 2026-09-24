@@ -1,0 +1,18 @@
+IoT Central > Dispositivos > mqtt-explicito-vm > Datos sin procesar
+Capturado 2026-09-24 durante la corrida de mqtt_explicito.py (Etapa 2)
+
+Estado: Conectado | Última recepción de datos: 24/9/2026, 15:38:08
+
+Marca de tiempo          Tipo de mensaje   Humedad relativa   Iluminancia   Temperatura
+24/9/2026, 15:38:08       Telemetría        50.3               860.3         26.4
+24/9/2026, 15:37:58       Telemetría        57                 880.7         16
+24/9/2026, 15:37:47       Telemetría        59                 674.2         28.6
+24/9/2026, 15:37:37       Telemetría        64.6               506.2         19
+24/9/2026, 15:37:36       Dispositivo conectado
+24/9/2026, 15:37:27       Dispositivo desconectado
+24/9/2026, 15:37:21       Telemetría        54.3               659.7         21.1
+
+Dispositivo nuevo, creado en esta plantilla especificamente para el
+Laboratorio 3 (mismo id_scope, misma plantilla "Nodo Ambiental de Aula").
+El JSON recibido coincide exactamente con el que arma mqtt_explicito.py:
+{"humidity": ..., "illuminance": ..., "temperature": ...}.

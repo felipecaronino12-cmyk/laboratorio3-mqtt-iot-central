@@ -1,0 +1,15 @@
+IoT Central > Dispositivos > python-vm-01 > Datos sin procesar
+Capturado 2026-09-24 durante la corrida de sdk_baseline.py (Etapa 1)
+
+Estado: Conectado | Última recepción de datos: 24/9/2026, 15:39:06
+
+Marca de tiempo          Tipo de mensaje   Humedad relativa   Iluminancia   Temperatura
+24/9/2026, 15:39:06       Telemetría        36.6               239.3         24.5
+24/9/2026, 15:38:56       Telemetría        43.5               195.3         19.6
+24/9/2026, 15:38:46       Telemetría        42.1               628.5         30.1
+24/9/2026, 15:38:36       Telemetría        51.8               158.6         28.8
+24/9/2026, 15:38:36       Dispositivo conectado
+
+Los mismos valores quedan también en mediciones/mediciones_sdk_cutoff.csv
+(columna timestamp_publish en epoch Unix), confirmando que el publish local
+y la marca de tiempo que muestra IoT Central coinciden dentro de 1 segundo.

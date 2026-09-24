@@ -1,0 +1,9 @@
+.ssh/
+*.pem
+.env
+.env.*
+!.env.example
+python-vm-mqtt/.venv/
+__pycache__/
+*.pyc
+wokwi/build/

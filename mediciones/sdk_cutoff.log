@@ -1,0 +1,9 @@
+[DPS-SDK] Provisionando python-vm-01 (SDK azure-iot-device) ...
+[DPS-SDK] Asignado a hub: iotc-631aa800-6992-4b08-a899-bfa301046377.azure-devices.net
+[SDK] Conectado.
+[SDK PUBLISH] {"humidity": 42.8, "illuminance": 240.4, "temperature": 16.8} (61 bytes)
+[SDK PUBLISH] {"humidity": 69.2, "illuminance": 238.1, "temperature": 30.6} (61 bytes)
+[SDK PUBLISH] {"humidity": 51.6, "illuminance": 776.6, "temperature": 31.4} (61 bytes)
+[SDK PUBLISH] {"humidity": 67.8, "illuminance": 410.6, "temperature": 16.1} (61 bytes)
+[SDK PUBLISH] {"humidity": 55.7, "illuminance": 227.6, "temperature": 16.6} (61 bytes)
+[SDK PUBLISH] {"humidity": 52.2, "illuminance": 839.1, "temperature": 19.6} (61 bytes)

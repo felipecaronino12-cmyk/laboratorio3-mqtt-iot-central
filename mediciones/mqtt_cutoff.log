@@ -1,0 +1,16 @@
+[DPS] Provisionando mqtt-explicito-vm en id_scope=0ne00FE0977 ...
+[DPS] Asignado a hub: iotc-631aa800-6992-4b08-a899-bfa301046377.azure-devices.net
+[MQTT] CONNACK reason_code=0
+[MQTT] Suscrito a twin/res y a C2D (devicebound)
+[MQTT] PUBACK/complete mid=3
+[PUBLISH] {"humidity": 64.5, "illuminance": 277.9, "temperature": 31.1} (61 bytes, qos=1) -> devices/mqtt-explicito-vm/messages/events/
+[MQTT] PUBACK/complete mid=4
+[PUBLISH] {"humidity": 49.0, "illuminance": 823.4, "temperature": 22.5} (61 bytes, qos=1) -> devices/mqtt-explicito-vm/messages/events/
+[MQTT] PUBACK/complete mid=5
+[PUBLISH] {"humidity": 44.2, "illuminance": 423.0, "temperature": 28.8} (61 bytes, qos=1) -> devices/mqtt-explicito-vm/messages/events/
+[PUBLISH] {"humidity": 54.8, "illuminance": 814.3, "temperature": 30.2} (61 bytes, qos=1) -> devices/mqtt-explicito-vm/messages/events/
+[MQTT] PUBACK/complete mid=6
+[MQTT] PUBACK/complete mid=7
+[PUBLISH] {"humidity": 47.8, "illuminance": 224.7, "temperature": 23.8} (61 bytes, qos=1) -> devices/mqtt-explicito-vm/messages/events/
+[MQTT] PUBACK/complete mid=8
+[PUBLISH] {"humidity": 68.6, "illuminance": 594.4, "temperature": 21.0} (61 bytes, qos=1) -> devices/mqtt-explicito-vm/messages/events/
