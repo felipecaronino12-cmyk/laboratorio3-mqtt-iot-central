@@ -11,6 +11,7 @@ sobre la misma app de IoT Central del Laboratorio 1/2.
 Central), creada desde cero específicamente para este laboratorio. No se
 reutilizó ninguna VM de otros compañeros ni la máquina compartida del
 profesor — solo recursos propios de esta cuenta.
+**Repositorio:** https://github.com/felipecaronino12-cmyk/laboratorio3-mqtt-iot-central
 
 ```
 laboratorio3/

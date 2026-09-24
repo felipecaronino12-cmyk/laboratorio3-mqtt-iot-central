@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Informe — Laboratorio 3: MQTT hacia Azure IoT Central</title>
+<style>
+  body { font-family: Georgia, 'Times New Roman', serif; max-width: 880px; margin: 40px auto; padding: 0 24px; color: #1a1a1a; line-height: 1.5; }
+  h1 { font-size: 1.6em; border-bottom: 3px solid #333; padding-bottom: 8px; }
+  h2 { font-size: 1.25em; margin-top: 2em; border-bottom: 1px solid #999; padding-bottom: 4px; }
+  h3 { font-size: 1.05em; margin-top: 1.3em; }
+  .meta { background: #f4f4f4; padding: 12px 16px; border-radius: 6px; margin-bottom: 1.5em; font-size: 0.95em; }
+  .meta p { margin: 3px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.9em; }
+  th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: #eee; }
+  code, .mono { font-family: 'Consolas', 'Courier New', monospace; background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+  pre { background: #1e1e1e; color: #dcdcdc; padding: 14px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; line-height: 1.4; }
+  a { color: #0b5fa5; }
+  .finding { background: #fff8e1; border-left: 4px solid #f0ad4e; padding: 8px 14px; margin: 1em 0; }
+</style>
+</head>
+<body>
+
+<h1>Informe — Laboratorio 3: MQTT hacia Azure IoT Central</h1>
+
+<div class="meta">
+<p><strong>Curso:</strong> IoT + Cloud + Sistemas Distribuidos — UAB</p>
+<p><strong>Autores:</strong> Juan Felipe Caro, Santiago Cabeza Mendez</p>
+<p><strong>Fecha:</strong> 24 de septiembre de 2026</p>
+<p><strong>App de IoT Central:</strong> UNAB-Ambiental — Monitoreo de Espacios Académicos (<span class="mono">laboratorio1caro.azureiotcentral.com</span>)</p>
+<p><strong>Cómputo:</strong> VM nueva y aislada <span class="mono">laboratorio3caro</span> (Azure for Students, <span class="mono">rg-laboratorio3caro</span>, Mexico Central), creada de 0 para este laboratorio — sin tocar la máquina compartida del profesor ni VMs de otros compañeros.</p>
+<p><strong>Repositorio:</strong> <a href="https://github.com/felipecaronino12-cmyk/laboratorio3-mqtt-iot-central">github.com/felipecaronino12-cmyk/laboratorio3-mqtt-iot-central</a></p>
+<p><strong>Proyecto Wokwi:</strong> <a href="https://wokwi.com/projects/474815106090292225">wokwi.com/projects/474815106090292225</a></p>
+</div>
+
+<h2>1. Diagrama del flujo MQTT</h2>
+<pre>
+Dispositivo (SDK / MQTT explícito / Wokwi)
+        │  1. DPS: HTTPS + SAS  ->  global.azure-devices-provisioning.net
+        │       (idScope + registrationId, token firmado HMAC-SHA256)
+        ▼
+   DPS responde: IoT Hub asignado
+   (iotc-631aa800-...-....azure-devices.net — mismo hub para toda la app)
+        │  2. MQTT 3.1.1 sobre TLS 1.2, puerto 8883
+        │     CONNECT user={hub}/{deviceId}/?api-version=2021-04-12
+        │             pass=SAS(sr={hub}/devices/{deviceId})
+        ▼
+      IoT Hub  ── PUBLISH devices/{deviceId}/messages/events/ ──►  IoT Central
+                  (telemetria: humidity, illuminance, temperature)
+        ▲
+        └── SUBSCRIBE $iothub/twin/res/#  y  devices/{deviceId}/messages/devicebound/#
+            (respuesta de twin y mensajes C2D / comandos)
+</pre>
+<p>Confirmado con las 3 vías (SDK, MQTT explícito, Wokwi): el "dispositivo" real de IoT Central nunca habla directo con IoT Central — siempre pasa primero por DPS (que solo resuelve a qué IoT Hub pertenece) y luego mantiene una sesión MQTT/TLS persistente contra ese hub. IoT Central es la capa de aplicación sobre ese mismo IoT Hub.</p>
+
+<h2>2. Los tres caminos</h2>
+<table>
+<tr><th>Camino</th><th>Dónde corre</th><th>Qué se ve</th></tr>
+<tr><td>SDK <span class="mono">azure-iot-device</span> (<span class="mono">sdk_baseline.py</span>)</td><td>VM <span class="mono">laboratorio3caro</span>, dispositivo <span class="mono">python-vm-01</span> (mismo del Lab 2)</td><td>El SDK esconde topics y token; solo se ve <span class="mono">send_message()</span>.</td></tr>
+<tr><td>MQTT explícito (<span class="mono">mqtt_explicito.py</span>, paho-mqtt)</td><td>VM <span class="mono">laboratorio3caro</span>, dispositivo nuevo <span class="mono">mqtt-explicito-vm</span></td><td>SAS generado a mano (<span class="mono">dps_sas.py</span>), topic y QoS explícitos.</td></tr>
+<tr><td>Arduino/ESP32 (Wokwi)</td><td>Wokwi, dispositivo <span class="mono">esp32-wokwi-02</span> (mismo del Lab 2, firmware sin cambios)</td><td>MQTT/TLS a mano en C++ (mismo patrón que <span class="mono">mqtt_explicito.py</span>).</td></tr>
+</table>
+<p>Los tres corren sobre la misma app y la misma plantilla del Laboratorio 1/2; <span class="mono">mqtt-explicito-vm</span> es un dispositivo nuevo (mismo <span class="mono">id_scope</span>, misma plantilla) para poder distinguir sus mensajes en el Data explorer sin mezclarlos con los del SDK.</p>
+
+<h2>3. Mediciones (Etapa 3)</h2>
+<p>CSV crudos en la carpeta <span class="mono">mediciones/</span> del repositorio.</p>
+
+<h3>3.1 Payload, intervalo y latencia (condiciones normales)</h3>
+<table>
+<tr><th>Camino</th><th>Payload (bytes)</th><th>Intervalo configurado</th><th>Intervalo observado (prom.)</th><th>Latencia local (prom.)</th></tr>
+<tr><td>SDK (<span class="mono">python-vm-01</span>)</td><td>61</td><td>10 s</td><td>~10.16 s</td><td>~0.14 s (<span class="mono">send_message</span>)</td></tr>
+<tr><td>MQTT explícito QoS 1</td><td>61</td><td>10 s</td><td>~10.14 s</td><td>~0.13 s (<span class="mono">wait_for_publish</span>)</td></tr>
+<tr><td>MQTT explícito QoS 0</td><td>61</td><td>10 s</td><td>10 s</td><td>~0.0003 s (no espera ack)</td></tr>
+</table>
+<p>El intervalo observado es ~1.5&nbsp;% mayor que el configurado en ambos casos — overhead normal de armar el payload y la llamada de red, no un problema del protocolo. El payload de 61 bytes es fijo porque los 3 valores del modelo (<span class="mono">humidity</span>, <span class="mono">illuminance</span>, <span class="mono">temperature</span>) siempre se serializan con 1 decimal.</p>
+
+<h3>3.2 Tiempo hasta verse en IoT Central</h3>
+<p>En todas las pruebas el mensaje apareció en <strong>Datos sin procesar</strong> dentro del mismo segundo del publish local (diferencia ≤ 1 s, límite de resolución de la marca de tiempo que muestra el portal). No hay retraso perceptible entre el <span class="mono">PUBACK</span> del hub y la visibilidad en la app.</p>
+
+<h3>3.3 Corte de red de ~20 s</h3>
+<p>Se cortó el tráfico saliente al puerto 8883 con <span class="mono">iptables -A OUTPUT -p tcp --dport 8883 -j DROP</span> durante 20 s mientras cada cliente publicaba, y se restauró. Logs completos en el repositorio (<span class="mono">mediciones/sdk_cutoff.log</span>, <span class="mono">mediciones/mqtt_cutoff.log</span>).</p>
+<table>
+<tr><th>Camino</th><th>Qué pasó durante el corte</th><th>Recuperación</th></tr>
+<tr><td>SDK</td><td>El <span class="mono">send_message()</span> que coincidió con el corte tardó 16.09 s en vez de ~0.14 s (bloqueado esperando el ack); no hubo excepción ni reconexión visible en el log (una sola línea "Conectado").</td><td>Automática: siguiente publish salió ~16 s más tarde de lo normal y luego el intervalo volvió a 10 s.</td></tr>
+<tr><td>MQTT explícito</td><td>El publish que coincidió con el corte agotó el timeout de <span class="mono">wait_for_publish(10 s)</span> sin confirmar; el script igual siguió su loop.</td><td>Automática: <span class="mono">loop_start()</span> de paho-mqtt corre <span class="mono">loop_forever()</span> internamente, que reintenta a nivel de socket. El siguiente publish, ~20 s después (duración exacta del corte), volvió a completarse en ~0.14 s normales.</td></tr>
+</table>
+<div class="finding"><strong>Hallazgo:</strong> un <span class="mono">DROP</span> de firewall (paquetes descartados en silencio, sin <span class="mono">RST</span>) no genera un ciclo completo de "MQTT disconnect → reconnect" en ninguno de los dos clientes — ambos lo toleran a nivel de socket/TCP, con un pico de latencia proporcional a la duración del corte, sin perder mensajes ni requerir intervención manual. Esto es distinto de una desconexión real de red (p.&nbsp;ej. WiFi caído), donde sí se esperaría ver un <span class="mono">CONNACK</span> nuevo — ese es justamente el ciclo Conectado ↔ Desconectado que se observa en Wokwi cuando el gateway IoT de Wokwi se reinicia.</div>
+
+<h3>3.4 QoS 0, 1 y 2</h3>
+<table>
+<tr><th>QoS pedido</th><th>Resultado</th><th>Latencia local</th></tr>
+<tr><td>0</td><td>Aceptado. "Fire and forget": el cliente no espera nada del broker.</td><td>~0.0003 s</td></tr>
+<tr><td>1</td><td>Aceptado. Espera <span class="mono">PUBACK</span>.</td><td>~0.13 s</td></tr>
+<tr><td>2</td><td>Aceptado <strong>sin error</strong>, pero con latencia prácticamente idéntica a QoS 1 (~0.13–0.14 s), no el handshake completo de 4 pasos (<span class="mono">PUBREC</span>/<span class="mono">PUBREL</span>/<span class="mono">PUBCOMP</span>) que exige la especificación MQTT para QoS 2.</td><td>~0.13 s</td></tr>
+</table>
+<div class="finding"><strong>Conclusión de QoS:</strong> el comportamiento observado confirma lo documentado por Microsoft: <strong>IoT Hub/Central soporta QoS 0 y QoS 1, pero no implementa QoS 2</strong> — en vez de rechazar la conexión o el publish, lo degrada silenciosamente a un comportamiento equivalente a QoS 1 (una sola confirmación, sin el handshake extendido). Para este escenario (telemetría ambiental cada 10 s, sin transacciones críticas) <strong>QoS 1 es la opción correcta</strong>: garantiza al menos una entrega sin el costo de latencia de un handshake que, de todas formas, el hub no ofrece.</div>
+
+<h2>4. Comparación y conclusión</h2>
+<table>
+<tr><th>Criterio</th><th>SDK <span class="mono">azure-iot-device</span></th><th>MQTT explícito (paho-mqtt)</th><th>Wokwi Arduino</th></tr>
+<tr><td>Facilidad de implementación</td><td>Alta: <span class="mono">create_from_symmetric_key</span> + <span class="mono">connect()</span> + <span class="mono">send_message()</span>.</td><td>Media: SAS, DPS y topics a mano en Python, pero directo.</td><td>Baja: todo lo anterior en C++, con HMAC/base64 manuales vía <span class="mono">mbedtls</span>, sin SDK oficial.</td></tr>
+<tr><td>Control del protocolo</td><td>Ninguno — todo escondido.</td><td>Total — QoS por mensaje, token visible, topic exacto.</td><td>Total, igual que MQTT explícito en Python.</td></tr>
+<tr><td>Payload</td><td>61 bytes</td><td>61 bytes</td><td>61 bytes</td></tr>
+<tr><td>Latencia percibida</td><td>~0.14 s normal; picos de hasta 16 s ante corte de 20 s.</td><td>~0.13 s en QoS 1; ~0.0003 s en QoS 0.</td><td>Comparable (mismo transporte); no medida en detalle por la lentitud del emulador.</td></tr>
+<tr><td>Reconexión ante corte de ~20 s</td><td>Automática, sin código adicional.</td><td>Automática vía <span class="mono">loop_start()</span>/<span class="mono">loop_forever()</span> de paho-mqtt.</td><td>En Lab 2 se observó un ciclo real Conectado ↔ Desconectado (reinicio del gateway de Wokwi).</td></tr>
+<tr><td>Utilidad para el Lab 1 (flota de aulas)</td><td>La mejor opción en VM/servidor: menos código, menos superficie de error.</td><td>Útil para depuración/diagnóstico o QoS 0 de alta frecuencia.</td><td>Obligatorio para el nodo embebido real: no hay SDK oficial de Azure para Arduino.</td></tr>
+</table>
+<p><strong>Conclusión accionable:</strong> para un nodo que corre en una VM o servidor con un lenguaje soportado por el SDK oficial, usar siempre el SDK — resuelve DPS, renovación de tokens y reconexión sin código adicional, y el "costo" de no controlar el protocolo no aplica en un escenario de telemetría estándar como el del Laboratorio 1. Reservar un cliente MQTT explícito para: (a) plataformas sin SDK oficial (firmware embebido tipo el ESP32 de Wokwi, donde es la única opción), o (b) depuración puntual cuando hay que confirmar exactamente qué token, topic o código de error está devolviendo el broker.</p>
+
+<h2>5. Evidencias</h2>
+<p>Carpeta <span class="mono">evidencias/</span> del repositorio: transcripciones de "Datos sin procesar" del Data explorer para <span class="mono">python-vm-01</span>, <span class="mono">mqtt-explicito-vm</span> y <span class="mono">esp32-wokwi-02</span>, incluyendo el ciclo Conectado ↔ Desconectado de Wokwi. Logs crudos de conexión/publish en <span class="mono">mediciones/</span>.</p>
+
+</body>
+</html>
